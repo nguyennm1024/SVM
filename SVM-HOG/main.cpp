@@ -5,7 +5,6 @@
 #include <fstream>
 #include <ctime>
 
-// includes for file_exists and files_in_directory functions
 #ifndef __linux
 #include <io.h> 
 #define access _access_s
@@ -134,10 +133,9 @@ void load_images(string directory, vector<Mat>& image_list) {
 
 void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector)
 {
-	// get the support vectors
 	Mat sv = svm->getSupportVectors();
 	const int sv_total = sv.rows;
-	// get the decision function
+	
 	Mat alpha, svidx;
 	double rho = svm->getDecisionFunction(0, alpha, svidx);
 
@@ -152,17 +150,12 @@ void get_svm_detector(const Ptr<SVM>& svm, vector< float > & hog_detector)
 	hog_detector[sv.cols] = (float)-rho;
 }
 
-/*
-* Convert training/testing set to be used by OpenCV Machine Learning algorithms.
-* TrainData is a matrix of size (#samples x max(#cols,#rows) per samples), in 32FC1.
-* Transposition of samples are made if needed.
-*/
+
 void convert_to_ml(const std::vector< cv::Mat > & train_samples, cv::Mat& trainData)
 {
-	//--Convert data
 	const int rows = (int)train_samples.size();
 	const int cols = (int)std::max(train_samples[0].cols, train_samples[0].rows);
-	cv::Mat tmp(1, cols, CV_32FC1); //< used for transposition if needed
+	cv::Mat tmp(1, cols, CV_32FC1);
 	trainData = cv::Mat(rows, cols, CV_32FC1);
 	vector< Mat >::const_iterator itr = train_samples.begin();
 	vector< Mat >::const_iterator end = train_samples.end();
@@ -208,7 +201,6 @@ void sample_neg(const vector< Mat > & full_neg_lst, vector< Mat > & neg_lst, con
 	}
 }
 
-// From http://www.juergenwiki.de/work/wiki/doku.php?id=public:hog_descriptor_computation_and_visualization
 Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorValues, const Size & size)
 {
 	const int DIMX = size.width;
@@ -219,9 +211,9 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 
 	int cellSize = 8;
 	int gradientBinSize = 9;
-	float radRangeForOneBin = (float)(CV_PI / (float)gradientBinSize); // dividing 180° into 9 bins, how large (in rad) is one bin?
+	float radRangeForOneBin = (float)(CV_PI / (float)gradientBinSize); 
 
-																	   // prepare data structure: 9 orientation / gradient strenghts for each cell
+															
 	int cells_in_x_dir = DIMX / cellSize;
 	int cells_in_y_dir = DIMY / cellSize;
 	float*** gradientStrengths = new float**[cells_in_y_dir];
@@ -240,12 +232,9 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 		}
 	}
 
-	// nr of blocks = nr of cells - 1
-	// since there is a new block on each cell (overlapping blocks!) but the last one
 	int blocks_in_x_dir = cells_in_x_dir - 1;
 	int blocks_in_y_dir = cells_in_y_dir - 1;
 
-	// compute gradient strengths per cell
 	int descriptorDataIdx = 0;
 	int cellx = 0;
 	int celly = 0;
@@ -254,10 +243,8 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 	{
 		for (int blocky = 0; blocky<blocks_in_y_dir; blocky++)
 		{
-			// 4 cells per block ...
 			for (int cellNr = 0; cellNr<4; cellNr++)
 			{
-				// compute corresponding cell nr
 				cellx = blockx;
 				celly = blocky;
 				if (cellNr == 1) celly++;
@@ -275,22 +262,17 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 
 					gradientStrengths[celly][cellx][bin] += gradientStrength;
 
-				} // for (all bins)
+				} 
 
 
-				  // note: overlapping blocks lead to multiple updates of this sum!
-				  // we therefore keep track how often a cell was updated,
-				  // to compute average gradient strengths
 				cellUpdateCounter[celly][cellx]++;
 
-			} // for (all cells)
+			} 
 
 
-		} // for (all block x pos)
-	} // for (all block y pos)
+		}
+	}
 
-
-	  // compute average gradient strengths
 	for (celly = 0; celly<cells_in_y_dir; celly++)
 	{
 		for (cellx = 0; cellx<cells_in_x_dir; cellx++)
@@ -298,7 +280,6 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 
 			float NrUpdatesForThisCell = (float)cellUpdateCounter[celly][cellx];
 
-			// compute average gradient strenghts for each gradient bin direction
 			for (int bin = 0; bin<gradientBinSize; bin++)
 			{
 				gradientStrengths[celly][cellx][bin] /= NrUpdatesForThisCell;
@@ -306,7 +287,6 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 		}
 	}
 
-	// draw cells
 	for (celly = 0; celly<cells_in_y_dir; celly++)
 	{
 		for (cellx = 0; cellx<cells_in_x_dir; cellx++)
@@ -319,12 +299,10 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 
 			rectangle(visu, Point((int)(drawX*zoomFac), (int)(drawY*zoomFac)), Point((int)((drawX + cellSize)*zoomFac), (int)((drawY + cellSize)*zoomFac)), Scalar(100, 100, 100), 1);
 
-			// draw in each cell all 9 gradient strengths
 			for (int bin = 0; bin<gradientBinSize; bin++)
 			{
 				float currentGradStrength = gradientStrengths[celly][cellx][bin];
 
-				// no line to draw?
 				if (currentGradStrength == 0)
 					continue;
 
@@ -333,24 +311,21 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 				float dirVecX = cos(currRad);
 				float dirVecY = sin(currRad);
 				float maxVecLen = (float)(cellSize / 2.f);
-				float scale = 2.5; // just a visualization scale, to see the lines better
+				float scale = 2.5;
 
-								   // compute line coordinates
+
 				float x1 = mx - dirVecX * currentGradStrength * maxVecLen * scale;
 				float y1 = my - dirVecY * currentGradStrength * maxVecLen * scale;
 				float x2 = mx + dirVecX * currentGradStrength * maxVecLen * scale;
 				float y2 = my + dirVecY * currentGradStrength * maxVecLen * scale;
 
-				// draw gradient visualization
 				line(visu, Point((int)(x1*zoomFac), (int)(y1*zoomFac)), Point((int)(x2*zoomFac), (int)(y2*zoomFac)), Scalar(0, 255, 0), 1);
 
-			} // for (all bins)
+			} 
+		} 
+	} 
 
-		} // for (cellx)
-	} // for (celly)
 
-
-	  // don't forget to free memory allocated by helper data structures!
 	for (int y = 0; y<cells_in_y_dir; y++)
 	{
 		for (int x = 0; x<cells_in_x_dir; x++)
@@ -365,7 +340,7 @@ Mat get_hogdescriptor_visu(const Mat& color_origImg, vector<float>& descriptorVa
 
 	return visu;
 
-} // get_hogdescriptor_visu
+}
 
 void compute_hog(const vector< Mat > & img_lst, vector< Mat > & gradient_lst, const Size & size)
 {
@@ -391,7 +366,6 @@ void compute_hog(const vector< Mat > & img_lst, vector< Mat > & gradient_lst, co
 
 void train_svm(const vector< Mat > & gradient_lst, const vector< int > & labels)
 {
-	/* Default values to train SVM */
 	Ptr<SVM> svm = SVM::create();
 	svm->setCoef0(0.0);
 	svm->setDegree(3);
@@ -399,9 +373,9 @@ void train_svm(const vector< Mat > & gradient_lst, const vector< int > & labels)
 	svm->setGamma(0);
 	svm->setKernel(SVM::LINEAR_CV);
 	svm->setNu(0.5);
-	svm->setP(0.1); // for EPSILON_SVR, epsilon in loss function?
-	svm->setC(0.01); // From paper, soft classifier
-	svm->setType(SVM::EPS_SVR); // C_SVC; // EPSILON_SVR; // may be also NU_SVR; // do regression task
+	svm->setP(0.1); 
+	svm->setC(0.01); 
+	svm->setType(SVM::EPS_SVR); 
 
 	Mat train_data;
 	convert_to_ml(gradient_lst, train_data);
@@ -436,19 +410,15 @@ void test_it(const Size & size)
 	VideoCapture video;
 	vector< Rect > locations;
 
-	// Load the trained SVM.
 	svm = StatModel::load<SVM>(TRAINED_SVM);
-	// Set the trained svm to my_hog
 	vector< float > hog_detector;
 	get_svm_detector(svm, hog_detector);
 	hog.setSVMDetector(hog_detector);
 
-	// Open the camera.
 	video.open(TRAFFIC_VIDEO_FILE);
 	if (!video.isOpened())
 	{
 		cerr << "Unable to open the device" << endl;
-		//exit(-1);
 	}
 
 	int num_of_vehicles = 0;
@@ -465,7 +435,6 @@ void test_it(const Size & size)
 #endif
 		draw = img.clone();
 
-		// Eliminate ingoing traffic
 		for (int pi = 0; pi < img.rows; ++pi)
 			for (int pj = 0; pj < img.cols; ++pj)
 				if (pj > img.cols) {
@@ -478,23 +447,6 @@ void test_it(const Size & size)
 		hog.detectMultiScale(img, locations);
 		draw_locations(draw, locations, Scalar(0, 255, 0));
 
-		//for (Rect r: locations) {
-
-		//	// Center point of the vehicle
-		//	Point center(r.x + r.width / 2, r.y + r.height / 2);
-
-		//	if (abs(center.y - img.rows * 2 / 3) < 2) {
-		//		++num_of_vehicles;
-		//		line(draw, Point(0, img.rows * 2 / 3), Point(img.cols / 2, img.rows * 2 / 3), Scalar(0, 255, 0), 3);
-		//		imshow(WINDOW_NAME, draw);
-		//		waitKey(50);
-		//	}
-		//	else
-		//		line(draw, Point(0, img.rows * 2 / 3), Point(img.cols / 2, img.rows * 2 / 3), Scalar(0, 0, 255), 3);
-
-		//}
-
-		//putText(draw, "Detected vehicles: " + to_string(num_of_vehicles), Point(50, 50), 1, 1, Scalar(0, 0, 255), 2);
 
 		imshow(WINDOW_NAME, draw);
 #if IS_VIDEO
